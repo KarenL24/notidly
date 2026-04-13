@@ -8,14 +8,9 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Upload, FileAudio, X, CheckCircle2, AlertCircle } from "lucide-react"
 
-// WAV + MP3 accepted for upload to Blob; downstream transcription may still prefer WAV
-const ACCEPTED_AUDIO_TYPES = [
-  "audio/wav",
-  "audio/x-wav",
-  "audio/mpeg",
-  "audio/mp3",
-]
-const ACCEPTED_EXTENSIONS = ".wav,.mp3"
+// Currently only WAV is supported for JS-based transcription
+const WAV_AUDIO_TYPES = ["audio/wav", "audio/x-wav"]
+const ACCEPTED_EXTENSIONS = ".wav"
 
 export default function UploadPage() {
   const router = useRouter()
@@ -27,15 +22,15 @@ export default function UploadPage() {
   const [fileError, setFileError] = useState("")
   const [isUploading, setIsUploading] = useState(false)
 
-  const isAcceptedAudio = (file: File) => {
-    const lower = file.name.toLowerCase()
-    if (lower.endsWith(".wav") || lower.endsWith(".mp3")) return true
-    return ACCEPTED_AUDIO_TYPES.includes(file.type)
+  const isWavFile = (file: File) => {
+    return WAV_AUDIO_TYPES.includes(file.type) || 
+           file.name.toLowerCase().endsWith('.wav')
   }
 
   const getUnsupportedFormatMessage = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase() || ''
     const formatNames: Record<string, string> = {
+      'mp3': 'MP3',
       'm4a': 'M4A (voice memo)',
       'webm': 'WebM (browser recording)',
       'ogg': 'OGG',
@@ -43,12 +38,12 @@ export default function UploadPage() {
       'mp4': 'MP4',
     }
     const formatName = formatNames[ext] || ext.toUpperCase()
-    return `${formatName} files are not supported. Please use WAV or MP3.`
+    return `${formatName} files are not yet supported. Please convert to WAV format and try again.`
   }
 
   const handleFile = useCallback((file: File) => {
     setFileError("")
-    if (isAcceptedAudio(file)) {
+    if (isWavFile(file)) {
       setAudioFile(file)
     } else {
       setFileError(getUnsupportedFormatMessage(file.name))
@@ -152,7 +147,7 @@ export default function UploadPage() {
               Create Draft
             </h1>
             <p className="text-muted-foreground text-center text-sm mb-8">
-              Upload a short solo vocal WAV or MP3 recording to generate a printable melody draft.
+              Upload a short solo vocal WAV recording to generate a printable melody draft.
             </p>
 
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -241,7 +236,7 @@ export default function UploadPage() {
                 )}
 
                 <p className="text-xs text-muted-foreground">
-                  WAV or MP3 (M4A, WebM, and other formats are not supported)
+                  WAV format only (MP3, M4A, WebM not yet supported)
                 </p>
               </div>
 
