@@ -107,13 +107,14 @@ export default function UploadPage() {
         throw new Error('Upload failed')
       }
 
-      const { pathname } = await uploadResponse.json()
+      const { pathname, blobUrl } = await uploadResponse.json()
 
       // Navigate to processing with blob pathname
       const params = new URLSearchParams({ 
         title: pieceTitle.trim(), 
         file: audioFile.name,
-        pathname: pathname 
+        pathname: pathname,
+        blobUrl: blobUrl,
       })
       router.push(`/app/processing?${params.toString()}`)
     } catch (error) {

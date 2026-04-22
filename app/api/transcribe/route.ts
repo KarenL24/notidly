@@ -440,7 +440,7 @@ function generateMusicXML(title: string, notes: Array<{ pitch: string; octave: n
 
 export async function POST(request: NextRequest) {
   try {
-    const { pathname, title } = await request.json()
+    const { pathname, title, blobUrl } = await request.json()
 
     if (!pathname) {
       return NextResponse.json({ 
@@ -461,11 +461,12 @@ export async function POST(request: NextRequest) {
       }, { status: 404 })
     }
 
-    // Build the audio URL for the Python backend to download
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
+    // Build the audio URL for the Python backend to download.
+    // Prefer direct Blob URL when available so FastAPI can fetch it directly.
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3000'
-    const audioUrl = `${baseUrl}/api/audio?pathname=${encodeURIComponent(pathname)}`
+    const audioUrl = result.downloadUrl || blobUrl || `${baseUrl}/api/audio?pathname=${encodeURIComponent(pathname)}`
 
     // Try calling the Python transcription backend first
     try {

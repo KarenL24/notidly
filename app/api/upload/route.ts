@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     // Return the pathname for use with the transcription endpoint
     return NextResponse.json({ 
       pathname: blob.pathname,
+      blobUrl: blob.url,
       fileName: file.name,
       title: title || 'Untitled'
     })

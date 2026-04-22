@@ -17,12 +17,14 @@ type Props = {
   pieceTitle: string
   fileName: string
   pathname: string
+  blobUrl: string
 }
 
 export default function ProcessingClient({
   pieceTitle,
   fileName,
   pathname,
+  blobUrl,
 }: Props) {
   const router = useRouter()
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
@@ -39,7 +41,7 @@ export default function ProcessingClient({
         const response = await fetch('/api/transcribe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ pathname, title: pieceTitle }),
+          body: JSON.stringify({ pathname, title: pieceTitle, blobUrl }),
         })
 
         const data = await response.json()
@@ -83,7 +85,7 @@ export default function ProcessingClient({
       stepTimers.forEach(t => clearTimeout(t))
       clearTimeout(transcribeTimer)
     }
-  }, [router, pieceTitle, fileName, pathname])
+  }, [router, pieceTitle, fileName, pathname, blobUrl])
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6 animate-in fade-in duration-300">

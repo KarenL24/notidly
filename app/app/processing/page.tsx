@@ -10,12 +10,14 @@ export default async function ProcessingPage({
   const pieceTitle = searchParamFirst(sp, "title") || "Untitled"
   const fileName = searchParamFirst(sp, "file") || "audio.mp3"
   const pathname = searchParamFirst(sp, "pathname") || ""
+  const blobUrl = searchParamFirst(sp, "blobUrl") || ""
 
   return (
     <ProcessingClient
       pieceTitle={pieceTitle}
       fileName={fileName}
       pathname={pathname}
+      blobUrl={blobUrl}
     />
   )
 }
