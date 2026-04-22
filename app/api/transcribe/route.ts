@@ -466,7 +466,11 @@ export async function POST(request: NextRequest) {
     const baseUrl = process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3000'
-    const audioUrl = result.downloadUrl || blobUrl || `${baseUrl}/api/audio?pathname=${encodeURIComponent(pathname)}`
+    const localProxyUrl = `${baseUrl}/api/audio?pathname=${encodeURIComponent(pathname)}`
+    const isLocalDev = !process.env.VERCEL_URL
+    const audioUrl = isLocalDev
+      ? localProxyUrl
+      : (result.downloadUrl || blobUrl || localProxyUrl)
 
     // Try calling the Python transcription backend first
     try {
