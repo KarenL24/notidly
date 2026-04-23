@@ -484,10 +484,9 @@ export async function POST(request: NextRequest) {
       ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3000'
     const localProxyUrl = `${baseUrl}/api/audio?pathname=${encodeURIComponent(pathname)}`
-    const isLocalDev = !process.env.VERCEL_URL
-    const audioUrl = isLocalDev
-      ? localProxyUrl
-      : (result.downloadUrl || blobUrl || localProxyUrl)
+    // Always use our server-side proxy for transcription backend fetches.
+    // Private blob URLs may return 403 when fetched directly by external services.
+    const audioUrl = localProxyUrl
 
     // Try calling the Python transcription backend first
     try {
