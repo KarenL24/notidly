@@ -116,30 +116,54 @@ export default function ReviewClient({
     if (!audioSrc) return
     
     const audio = new Audio(audioSrc)
-    audio.crossOrigin = "anonymous"
+    audio.preload = "auto"
     audioRef.current = audio
-    
-    audio.addEventListener('loadedmetadata', () => {
-      setTotalDuration(audio.duration)
+
+    setIsPlaying(false)
+    setCurrentTime(0)
+    setTotalDuration(0)
+    setAudioReady(false)
+
+    const onLoadedMetadata = () => {
+      setTotalDuration(Number.isFinite(audio.duration) ? audio.duration : 0)
       setAudioReady(true)
-    })
-    
-    audio.addEventListener('timeupdate', () => {
-      setCurrentTime(audio.currentTime)
-    })
-    
-    audio.addEventListener('ended', () => {
+    }
+
+    const onCanPlay = () => {
+      setAudioReady(true)
+      if (Number.isFinite(audio.duration)) {
+        setTotalDuration(audio.duration)
+      }
+    }
+
+    const onTimeUpdate = () => {
+      setCurrentTime(Number.isFinite(audio.currentTime) ? audio.currentTime : 0)
+    }
+
+    const onEnded = () => {
       setIsPlaying(false)
       setCurrentTime(0)
-    })
-    
-    audio.addEventListener('error', (e) => {
+    }
+
+    const onError = (e: Event) => {
       console.error('Audio error:', e)
       setAudioReady(false)
-    })
+    }
+
+    audio.addEventListener('loadedmetadata', onLoadedMetadata)
+    audio.addEventListener('canplay', onCanPlay)
+    audio.addEventListener('timeupdate', onTimeUpdate)
+    audio.addEventListener('ended', onEnded)
+    audio.addEventListener('error', onError)
+    audio.load()
     
     return () => {
       audio.pause()
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata)
+      audio.removeEventListener('canplay', onCanPlay)
+      audio.removeEventListener('timeupdate', onTimeUpdate)
+      audio.removeEventListener('ended', onEnded)
+      audio.removeEventListener('error', onError)
       audio.src = ''
     }
   }, [audioSrc])
@@ -156,6 +180,7 @@ export default function ReviewClient({
   }, [isPlaying])
 
   const formatTime = (seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds < 0) return "0:00"
     const mins = Math.floor(seconds / 60)
     const secs = Math.floor(seconds % 60)
     return `${mins}:${secs.toString().padStart(2, "0")}`
