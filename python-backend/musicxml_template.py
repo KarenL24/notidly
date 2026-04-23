@@ -18,7 +18,7 @@ def build_fake_musicxml() -> str:
         <clef><sign>G</sign><line>2</line></clef>
       </attributes>
       <note>
-        <pitch><step>C</step><octave>4</octave></pitch>
+        <pitch><step>B</step><octave>4</octave></pitch>
         <duration>1</duration>
         <type>quarter</type>
       </note>
@@ -38,6 +38,29 @@ def build_fake_musicxml() -> str:
         <type>quarter</type>
       </note>
     </measure>
+    <measure number="1">
+      <note>
+        <pitch><step>B</step><octave>4</octave></pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+      <note>
+        <pitch><step>D</step><octave>4</octave></pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+      <note>
+        <pitch><step>E</step><octave>4</octave></pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+      <note>
+        <pitch><step>F</step><octave>4</octave></pitch>
+        <duration>1</duration>
+        <type>quarter</type>
+      </note>
+    </measure>
+    
   </part>
 </score-partwise>
 """
