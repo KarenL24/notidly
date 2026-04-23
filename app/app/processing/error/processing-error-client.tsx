@@ -38,7 +38,7 @@ export default function ProcessingErrorClient({
   const router = useRouter()
 
   const showDebugPanel = true
-  const isPythonUnavailable = errorCode === "PYTHON_BACKEND_UNAVAILABLE"
+  const isBackendConfigError = errorCode === "PYTHON_BACKEND_UNAVAILABLE" || errorCode === "TRANSCRIPTION_API_URL_MISSING"
 
   const handleTryAgain = () => {
     router.push("/app")
@@ -70,23 +70,29 @@ export default function ProcessingErrorClient({
               </div>
 
               <h1 className="text-xl font-semibold text-foreground mb-2">
-                {"We couldn't generate a reliable melody from this clip."}
+                {isBackendConfigError
+                  ? "Transcription service is temporarily unavailable."
+                  : "We couldn't generate a reliable melody from this clip."}
               </h1>
 
               <p className="text-sm text-muted-foreground mb-6">
-                For best results, try a recording with:
+                {isBackendConfigError
+                  ? "Please try again shortly. If this persists, contact support."
+                  : "For best results, try a recording with:"}
               </p>
 
-              <div className="w-full space-y-3 mb-8 text-left">
-                {BEST_PRACTICES.map((practice) => (
-                  <div key={practice} className="flex items-center gap-3">
-                    <div className="flex-shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center">
-                      <Check className="h-3 w-3 text-muted-foreground" />
+              {!isBackendConfigError && (
+                <div className="w-full space-y-3 mb-8 text-left">
+                  {BEST_PRACTICES.map((practice) => (
+                    <div key={practice} className="flex items-center gap-3">
+                      <div className="flex-shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center">
+                        <Check className="h-3 w-3 text-muted-foreground" />
+                      </div>
+                      <span className="text-sm text-foreground">{practice}</span>
                     </div>
-                    <span className="text-sm text-foreground">{practice}</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
 
               <div className="w-full space-y-3">
                 <Button onClick={handleTryAgain} className="w-full bg-primary hover:bg-primary/90 transition-colors">
@@ -115,11 +121,11 @@ export default function ProcessingErrorClient({
             </div>
             <div className="space-y-1.5 text-muted-foreground">
               <div><span className="text-foreground">Error Code:</span> {errorCode}</div>
-              {isPythonUnavailable && pythonBackendUrl && (
+              {isBackendConfigError && (
                 <div className="pt-2 border-t border-border">
                   <span className="text-foreground">Python Backend URL:</span>
                   <div className="mt-1 break-all bg-muted/50 rounded px-2 py-1">
-                    {pythonBackendUrl}
+                    {pythonBackendUrl || "(not configured)"}
                   </div>
                   <div className="mt-2 text-yellow-600 text-[10px]">
                     To fix: Deploy the Python FastAPI backend and set TRANSCRIPTION_API_URL environment variable.

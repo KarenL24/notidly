@@ -1,8 +1,13 @@
 import { get } from '@vercel/blob'
 import { type NextRequest, NextResponse } from 'next/server'
 
-// Python backend URL - in production, this would be the deployed FastAPI service
-const TRANSCRIPTION_API_URL = process.env.TRANSCRIPTION_API_URL || 'http://localhost:8000'
+// Resolve Python backend URL. In development, localhost fallback is allowed.
+function getTranscriptionApiUrl(): string | null {
+  const configuredUrl = process.env.TRANSCRIPTION_API_URL?.trim()
+  if (configuredUrl) return configuredUrl
+  if (process.env.NODE_ENV !== 'production') return 'http://localhost:8000'
+  return null
+}
 
 // Note names for pitch detection
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
@@ -440,6 +445,18 @@ function generateMusicXML(title: string, notes: Array<{ pitch: string; octave: n
 
 export async function POST(request: NextRequest) {
   try {
+    const transcriptionApiUrl = getTranscriptionApiUrl()
+
+    if (!transcriptionApiUrl) {
+      return NextResponse.json({
+        success: false,
+        errorCode: 'TRANSCRIPTION_API_URL_MISSING',
+        error: 'Transcription backend is not configured. Set TRANSCRIPTION_API_URL to a deployed FastAPI instance.',
+        pythonBackendUrl: '',
+        debugSource: 'CONFIG_ERROR'
+      }, { status: 503 })
+    }
+
     const { pathname, title, blobUrl } = await request.json()
 
     if (!pathname) {
@@ -474,7 +491,7 @@ export async function POST(request: NextRequest) {
 
     // Try calling the Python transcription backend first
     try {
-      const transcribeResponse = await fetch(`${TRANSCRIPTION_API_URL}/api/transcribe`, {
+      const transcribeResponse = await fetch(`${transcriptionApiUrl}/api/transcribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -540,8 +557,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: false,
         errorCode: 'PYTHON_BACKEND_UNAVAILABLE',
-        error: `The Python transcription backend is not available. Set TRANSCRIPTION_API_URL environment variable to a running FastAPI instance. Current target: ${TRANSCRIPTION_API_URL}`,
-        pythonBackendUrl: TRANSCRIPTION_API_URL,
+        error: `The Python transcription backend is not available. Set TRANSCRIPTION_API_URL environment variable to a running FastAPI instance. Current target: ${transcriptionApiUrl}`,
+        pythonBackendUrl: transcriptionApiUrl,
         debugSource: 'FAILURE_STATE',
         jsDebug: jsDebug // Debug info only - not used for rendering
       }, { status: 503 })
