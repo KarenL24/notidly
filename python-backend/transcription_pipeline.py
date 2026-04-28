@@ -18,7 +18,8 @@ MIN_NOTE_FRAMES = 1
 MIN_NOTE_SEC = 0.02
 MAX_GAP_FILL_SEC = 0.35
 NEAR_PITCH_SEMITONES = 3
-SEMITONE_WOBBLE_MAX_SEC = 0.22
+SEMITONE_WOBBLE_MAX_SEC = 0.24
+SEMITONE_WOBBLE_MAX_GAP_SEC = 0.08
 
 
 def _hz_to_midi(freq_hz: float) -> int:
@@ -55,13 +56,30 @@ def _smooth_f0(f0_hz: np.ndarray) -> np.ndarray:
     if idx.size < 9:
         return out
 
-    # Extra-strong smoothing: median(9) then avg(7).
+    # Semitone-aware smoothing:
+    # - very strong when local movement is <= 1 semitone (e.g. F/F# wobble)
+    # - lighter when movement is >= 2 semitones (e.g. F->G melodic motion)
     vals = out[idx]
-    pad_med = np.pad(vals, (4, 4), mode="edge")
-    med = np.array([np.median(pad_med[k : k + 9]) for k in range(vals.size)])
-    pad_avg = np.pad(med, (3, 3), mode="edge")
-    avg = np.array([np.mean(pad_avg[k : k + 7]) for k in range(med.size)])
-    out[idx] = avg
+    pad = np.pad(vals, (4, 4), mode="edge")
+    smoothed = vals.copy()
+    for k in range(vals.size):
+        window = pad[k : k + 9]
+        midi_window = np.array([_hz_to_midi(float(v)) for v in window])
+        spread = int(np.max(midi_window) - np.min(midi_window))
+        # Fast context: many local pitch moves inside ~0.1s window.
+        local_diffs = np.abs(np.diff(midi_window))
+        fast_context = int(np.count_nonzero(local_diffs >= 1)) >= 3
+        if spread <= 1:
+            # Only strongly smooth semitone wobble when context is fast.
+            # If spaced-out notes, keep more nuance.
+            smoothed[k] = float(np.mean(window)) if fast_context else float(np.median(window[3:6]))
+        elif spread == 2:
+            # Medium smooth for close neighbor motion.
+            smoothed[k] = float(np.median(window[2:7])) if fast_context else float(np.median(window[3:6]))
+        else:
+            # Preserve clear melodic jumps.
+            smoothed[k] = float(np.median(window[3:6]))
+    out[idx] = smoothed
     return out
 
 
@@ -191,9 +209,17 @@ def _collapse_semitone_wobble(groups: List[PitchGroup]) -> List[PitchGroup]:
     for curr in groups[1:]:
         prev = out[-1]
         semitone = abs(curr.midi - prev.midi)
+        gap = curr.startSec - prev.endSec
         prev_dur = prev.endSec - prev.startSec
         curr_dur = curr.endSec - curr.startSec
-        if semitone == 1 and (prev_dur <= SEMITONE_WOBBLE_MAX_SEC or curr_dur <= SEMITONE_WOBBLE_MAX_SEC):
+        # Strong anti-wobble mode:
+        # collapse tightly connected semitone flips when at least one side is short.
+        if (
+            semitone == 1
+            and gap >= 0
+            and gap <= SEMITONE_WOBBLE_MAX_GAP_SEC
+            and (prev_dur <= SEMITONE_WOBBLE_MAX_SEC or curr_dur <= SEMITONE_WOBBLE_MAX_SEC)
+        ):
             keep = prev if prev.confidence >= curr.confidence else curr
             out[-1] = PitchGroup(
                 startSec=prev.startSec,
