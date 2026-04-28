@@ -3,7 +3,7 @@ from schemas import TranscribeRequest, TranscribeResponse
 from transcription_pipeline import transcribe_from_request
 
 
-app = FastAPI(title="Notidly Mock Transcription API", version="0.1.0")
+app = FastAPI(title="Notidly Transcription API", version="0.2.0")
 
 
 @app.get("/health")

@@ -10,7 +10,7 @@ interface MelodyDisplayProps {
 
 export function MelodyDisplay({ musicxml }: MelodyDisplayProps) {
   const [mounted, setMounted] = useState(false)
-  const [svg, setSvg] = useState<string | null>(null)
+  const [svgPages, setSvgPages] = useState<string[]>([])
   const [renderError, setRenderError] = useState(false)
 
   useEffect(() => {
@@ -22,7 +22,7 @@ export function MelodyDisplay({ musicxml }: MelodyDisplayProps) {
 
     const renderWithVerovio = async () => {
       if (!mounted || !musicxml) {
-        setSvg(null)
+        setSvgPages([])
         setRenderError(false)
         return
       }
@@ -33,24 +33,29 @@ export function MelodyDisplay({ musicxml }: MelodyDisplayProps) {
 
         const toolkit = new VerovioToolkit(module)
         toolkit.setOptions({
-          scale: 42,
-          pageWidth: 1400,
-          pageHeight: 280,
+          scale: 38,
+          pageWidth: 950,
+          pageHeight: 1200,
           adjustPageHeight: true,
-          breaks: "encoded",
+          breaks: "line",
           footer: "none",
           header: "none",
         })
         toolkit.loadData(musicxml)
-        const rendered = toolkit.renderToSVG(1, {})
+        const pageCount = toolkit.getPageCount()
+        const pages: string[] = []
+        for (let page = 1; page <= pageCount; page++) {
+          const rendered = toolkit.renderToSVG(page, {})
+          if (rendered) pages.push(rendered)
+        }
 
-        if (!rendered || cancelled) return
-        setSvg(rendered)
+        if (pages.length === 0 || cancelled) return
+        setSvgPages(pages)
         setRenderError(false)
       } catch (error) {
         console.error("Failed to render MusicXML with Verovio:", error)
         if (!cancelled) {
-          setSvg(null)
+          setSvgPages([])
           setRenderError(true)
         }
       }
@@ -62,15 +67,20 @@ export function MelodyDisplay({ musicxml }: MelodyDisplayProps) {
     }
   }, [mounted, musicxml])
 
-  const showErrorState = mounted && (!musicxml || renderError || !svg)
+  const showErrorState = mounted && (!musicxml || renderError || svgPages.length === 0)
 
   return (
     <div className="w-full bg-card rounded-xl border border-border overflow-hidden relative">
-      {svg ? (
-        <div
-          className="w-full overflow-x-auto p-3"
-          dangerouslySetInnerHTML={{ __html: svg }}
-        />
+      {svgPages.length > 0 ? (
+        <div className="w-full p-3 space-y-4">
+          {svgPages.map((svg, index) => (
+            <div
+              key={index}
+              className="w-full bg-white border border-border rounded-md p-2 overflow-hidden"
+              dangerouslySetInnerHTML={{ __html: svg }}
+            />
+          ))}
+        </div>
       ) : (
         <div className="h-[150px] w-full" />
       )}

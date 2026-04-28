@@ -1,2 +1,7 @@
 fastapi
 uvicorn
+librosa
+music21
+numpy
+scipy
+soundfile

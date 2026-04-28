@@ -12,6 +12,7 @@ const STEPS = [
   { label: "Extracting melody", delay: 2500 },
   { label: "Preparing notation", delay: 4000 },
 ]
+const REVIEW_RESULT_STORAGE_KEY = "notidly:last-transcription-result"
 
 type Props = {
   pieceTitle: string
@@ -62,15 +63,39 @@ export default function ProcessingClient({
           return
         }
 
-        const params = new URLSearchParams({ 
-          title: pieceTitle, 
+        const reviewPayload = {
+          musicxml: data.musicxml || null,
+          tempoBpm: String(data.tempoBpm || 0),
+          source: data.source || "UNKNOWN",
+          isPythonBackend: Boolean(data.isPythonBackend),
+          warnings: Array.isArray(data.warnings) ? data.warnings : [],
+          pitchGroups: Array.isArray(data.pitchGroups) ? data.pitchGroups : [],
+          savedAt: Date.now(),
+        }
+        if (typeof window !== "undefined") {
+          sessionStorage.setItem(REVIEW_RESULT_STORAGE_KEY, JSON.stringify(reviewPayload))
+        }
+
+        let resultId: string | null = null
+        try {
+          const storeResponse = await fetch("/api/transcription-result", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(reviewPayload),
+          })
+          const storeData = await storeResponse.json()
+          if (storeResponse.ok && storeData.success && typeof storeData.resultId === "string") {
+            resultId = storeData.resultId
+          }
+        } catch (storeError) {
+          console.warn("Could not persist transcription result on server", storeError)
+        }
+
+        const params = new URLSearchParams({
+          title: pieceTitle,
           file: fileName,
           pathname: pathname,
-          musicxml: encodeURIComponent(data.musicxml),
-          tempoBpm: String(data.tempoBpm || 0),
-          source: data.source || 'UNKNOWN',
-          isPythonBackend: data.isPythonBackend ? 'true' : 'false',
-          warnings: JSON.stringify(data.warnings || [])
+          ...(resultId ? { resultId } : {}),
         })
         router.push(`/app/review?${params.toString()}`)
       } catch (error) {

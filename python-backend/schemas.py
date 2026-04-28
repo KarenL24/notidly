@@ -8,8 +8,17 @@ class TranscribeRequest(BaseModel):
     title: str = "Untitled"
 
 
+class PitchGroup(BaseModel):
+    startSec: float
+    endSec: float
+    midi: int
+    note: str
+    confidence: float
+
+
 class TranscribeResponse(BaseModel):
     xml: str
     title: str
     tempoBpm: int
     warnings: List[str]
+    pitchGroups: List[PitchGroup]

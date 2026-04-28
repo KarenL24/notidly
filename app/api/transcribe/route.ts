@@ -9,6 +9,21 @@ function getTranscriptionApiUrl(): string | null {
   return null
 }
 
+async function getBlobWithRetry(pathname: string) {
+  let lastError: unknown = null
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      return await get(pathname, { access: 'private' })
+    } catch (error) {
+      lastError = error
+      if (attempt < 2) {
+        await new Promise((resolve) => setTimeout(resolve, 250 * attempt))
+      }
+    }
+  }
+  throw lastError
+}
+
 // Note names for pitch detection
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 
@@ -467,15 +482,15 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Get the audio file from blob storage
-    const result = await get(pathname, { access: 'private' })
-    
-    if (!result) {
-      return NextResponse.json({ 
+    // Validate blob path with retry; transient network timeout can happen.
+    try {
+      await getBlobWithRetry(pathname)
+    } catch (blobError) {
+      return NextResponse.json({
         success: false,
-        errorCode: 'FILE_NOT_FOUND', 
-        error: 'Audio file not found' 
-      }, { status: 404 })
+        errorCode: 'BLOB_FETCH_TIMEOUT',
+        error: 'Timed out while fetching audio from Blob storage. Please retry in a moment.',
+      }, { status: 503 })
     }
 
     // Build the audio URL for the Python backend to download.
@@ -518,6 +533,7 @@ export async function POST(request: NextRequest) {
         title: data.title,
         tempoBpm: data.tempoBpm,
         warnings: data.warnings || [],
+        pitchGroups: data.pitchGroups || [],
         pathname: pathname,
         source: 'PYTHON_BACKEND', // Explicit source label
         isPythonBackend: true
